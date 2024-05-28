@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { firebase } from '../firebaseConfig';
 
 const Colors = {
   primary: "#ffffff",
@@ -12,9 +13,40 @@ const Colors = {
 
 const DetailedItem = ({ route }) => {
   const { item } = route.params;
+  const [ownerName, setOwnerName] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOwnerName = async () => {
+      try {
+        const userDoc = await firebase.firestore().collection('users').doc(item.ownerId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          setOwnerName(userData.name);
+        } else {
+          console.log("No such document!");
+        }
+      } catch (error) {
+        console.error("Error fetching owner details: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOwnerName();
+  }, [item.ownerId]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.brand} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.header}>Detailed Item Info</Text>
+      <Text style={styles.header}>Detailed Item Info</Text>
       <Image source={{ uri: item.image }} style={styles.image} />
       <View style={styles.detailsContainer}>
         <Text style={styles.itemName}>{item.itemName}</Text>
@@ -28,16 +60,21 @@ const DetailedItem = ({ route }) => {
           <Text style={styles.locationLabel}>Location:</Text>
           <Text style={styles.location}>{item.location}</Text>
         </View>
+        <View style={styles.ownerContainer}>
+          <Text style={styles.ownerLabel}>Owner:</Text>
+          <Text style={styles.ownerName}>{ownerName}</Text>
+        </View>
       </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-    header: {
-        fontSize: 28,
-        fontWeight: 'bold',
-    },
+  header: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
   container: {
     flexGrow: 1,
     padding: 16,
@@ -103,6 +140,25 @@ const styles = StyleSheet.create({
   location: {
     fontSize: 16,
     color: Colors.tertiary,
+  },
+  ownerContainer: {
+    marginBottom: 16,
+  },
+  ownerLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.tertiary,
+    marginBottom: 4,
+  },
+  ownerName: {
+    fontSize: 16,
+    color: Colors.tertiary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
   },
 });
 

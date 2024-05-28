@@ -55,7 +55,7 @@ const Register = ({ navigation }) => {
           <Text style={styles.secondHeader}>-SIGN UP-</Text>
           <View style={styles.formArea}>
             <MyTextInput
-              label="Full Name:"
+              label="Name:"
               icon="person"
               placeholder="Enter Your Name"
               onChangeText={setFullName}

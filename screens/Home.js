@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';  // Import icon library
 import ItemCard from '../components/ItemCard';
+import { useFocusEffect } from '@react-navigation/native';
 import { firebase } from '../firebaseConfig';
 
 const Colors = {
@@ -12,7 +13,7 @@ const Colors = {
   blue: "#569fa0",
   gray: "#f9e8d1"
 };
-
+//TODO Add a REFRESH ICON so that it doesn't infinitey fetch
 const Home = ({ navigation }) => {
   const [name, setFullName] = useState('');
   const [selectedSection, setSelectedSection] = useState('availableItems');
@@ -20,45 +21,52 @@ const Home = ({ navigation }) => {
   const [availableItems, setAvailableItems] = useState([]);
   const [rentRequests, setRentRequests] = useState([]);
 
+  const fetchUser = async () => {
+    try {
+      const userSnapshot = await firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).get();
+      if (userSnapshot.exists) {
+        const userData = userSnapshot.data();
+        setFullName(userData.fullName);
+      } else {
+        alert("User does not exist");
+      }
+    } catch (error) {
+      console.error("Error fetching user data: ", error);
+    }
+  };
+
+  const fetchItems = async () => {
+    try {
+      const itemsSnapshot = await firebase.firestore().collection('items').get();
+      const items = itemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAvailableItems(items);
+    } catch (error) {
+      console.error("Error fetching items: ", error);
+    }
+  };
+
+  const fetchRentRequests = async () => {
+    console.log("fetching")
+    try {
+      const requestsSnapshot = await firebase.firestore().collection('rentRequests').get();
+      const requests = requestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setRentRequests(requests);
+    } catch (error) {
+      console.error("Error fetching rent requests: ", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userSnapshot = await firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).get();
-        if (userSnapshot.exists) {
-          const userData = userSnapshot.data();
-          setFullName(userData.fullName);
-        } else {
-          alert("User does not exist");
-        }
-      } catch (error) {
-        console.error("Error fetching user data: ", error);
-      }
-    };
-
-    const fetchItems = async () => {
-      try {
-        const itemsSnapshot = await firebase.firestore().collection('items').get();
-        const items = itemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAvailableItems(items);
-      } catch (error) {
-        console.error("Error fetching items: ", error);
-      }
-    };
-
-    const fetchRentRequests = async () => {
-      try {
-        const requestsSnapshot = await firebase.firestore().collection('rentRequests').get();
-        const requests = requestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setRentRequests(requests);
-      } catch (error) {
-        console.error("Error fetching rent requests: ", error);
-      }
-    };
-
     fetchUser();
     fetchItems();
     fetchRentRequests();
   }, []);
+
+  useFocusEffect(() => {
+    fetchItems();
+    fetchRentRequests();
+  });
+
 
   const renderItems = () => {
     const filteredItems = availableItems.filter(item =>
