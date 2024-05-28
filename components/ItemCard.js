@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-
+import { useNavigation } from '@react-navigation/native';
 
 const Colors = {
   primary: "#ffffff",
@@ -11,16 +11,45 @@ const Colors = {
   gray: "#f9e8d1"
 };
 
+const ItemCard = ({ image, itemName, rentPerHour, description, phoneNumber, location, mode, subMode }) => {
+  const navigation = useNavigation();
 
-const ItemCard = ({ image, itemName, rentPerHour, description, onRequestRent }) => {
+  let buttonTextDisplay;
+  let displayRed = false;
+  if (mode === "availableItems") {
+    if (subMode === "byYou") {
+      buttonTextDisplay = "Remove Item";
+      displayRed = true;
+    } else {
+      buttonTextDisplay = "Request Item";
+    }
+  } else if (mode === "rentRequests") {
+    if (subMode === "byYou") {
+      buttonTextDisplay = "Remove Rent Request";
+      displayRed = true;
+    } else {
+      buttonTextDisplay = "Contact Person";
+    }
+  }
+
+  let costDisplay = mode === "availableItems" ? "Cost per Hour: " : "Expected cost/Hour: ";
+
+  const handlePress = () => {
+    if (subMode !== 'byYou') {
+      navigation.navigate('DetailedItem', {
+        item: { image, itemName, rentPerHour, description, phoneNumber, location, mode }
+      });
+    }
+  };
+  
+
   return (
     <View style={styles.container}>
       <Image source={{ uri: image }} style={styles.image} />
       <Text style={styles.itemName}>{itemName}</Text>
-      <Text style={styles.rentPerHour}>Cost per hour: {rentPerHour}</Text>
-      <Text style={styles.description}>{description}</Text>
-      <TouchableOpacity onPress={onRequestRent} style={styles.rentButton}>
-        <Text style={styles.rentButtonText}>Request Rent</Text>
+      <Text style={styles.rentPerHour}>{costDisplay} {rentPerHour}</Text>
+      <TouchableOpacity onPress={handlePress} style={[styles.rentButton, displayRed && styles.redButton]}>
+        <Text style={styles.rentButtonText}>{buttonTextDisplay}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -34,6 +63,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 10,
     padding: 10,
+    
   },
   image: {
     width: '100%',
@@ -47,13 +77,16 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   rentPerHour: {
-    fontSize: 16,
+    fontSize: 12,
     marginTop: 5,
   },
   description: {
     fontSize: 14,
     marginTop: 5,
     color: 'gray',
+  },
+  redButton: {
+    backgroundColor: '#f43e11',
   },
   rentButton: {
     backgroundColor: Colors.blue,
