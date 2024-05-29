@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';  // Import icon library
+import { Ionicons } from '@expo/vector-icons';
 import ItemCard from '../components/ItemCard';
-import { useFocusEffect } from '@react-navigation/native';
 import { firebase } from '../firebaseConfig';
 
 const Colors = {
@@ -13,7 +12,7 @@ const Colors = {
   blue: "#569fa0",
   gray: "#f9e8d1"
 };
-//TODO Add a REFRESH ICON so that it doesn't infinitey fetch
+
 const Home = ({ navigation }) => {
   const [name, setFullName] = useState('');
   const [selectedSection, setSelectedSection] = useState('availableItems');
@@ -46,7 +45,6 @@ const Home = ({ navigation }) => {
   };
 
   const fetchRentRequests = async () => {
-    console.log("fetching")
     try {
       const requestsSnapshot = await firebase.firestore().collection('rentRequests').get();
       const requests = requestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -62,11 +60,10 @@ const Home = ({ navigation }) => {
     fetchRentRequests();
   }, []);
 
-  useFocusEffect(() => {
+  const handleRefresh = () => {
     fetchItems();
     fetchRentRequests();
-  });
-
+  };
 
   const renderItems = () => {
     const filteredItems = availableItems.filter(item =>
@@ -82,7 +79,7 @@ const Home = ({ navigation }) => {
             <ItemCard
               key={item.id}
               image={item.image}
-              id={item.id}
+              itemId={item.id}
               itemName={item.itemName}
               rentPerHour={item.rentPerHour}
               description={item.description}
@@ -90,6 +87,8 @@ const Home = ({ navigation }) => {
               subMode={selectedSubsection}
               phoneNumber={item.mobile}
               location={item.location}
+              handleRefresh={handleRefresh}
+              ownerId={item.ownerId}
             />
           ))
         )}
@@ -109,23 +108,24 @@ const Home = ({ navigation }) => {
         ) : (
           filteredRequests.map(request => (
             <ItemCard
-              key={request.id}
-              image={request.image}
-              id={request.id}
-              itemName={request.itemName}
-              rentPerHour={request.rentPerHour}
-              mode={selectedSection}
-              subMode={selectedSubsection}
-              description={request.description}
-              phoneNumber={request.mobile}
-              location={request.location}
+            key={request.id}
+            image={request.image}
+            itemId={request.id}
+            itemName={request.itemName}
+            rentPerHour={request.rentPerHour}
+            mode={selectedSection}
+            handleRefresh={handleRefresh}
+            subMode={selectedSubsection}
+            description={request.description}
+            phoneNumber={request.mobile}
+            location={request.location}
             />
           ))
         )}
       </View>
     );
   };
-
+  
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
@@ -133,9 +133,14 @@ const Home = ({ navigation }) => {
           <Image source={require("../assets/LogoLeftRight.png")} style={styles.logo} resizeMode="contain" />
           <View style={styles.welcomeContainer}>
             <Text style={styles.text}>Welcome {name}</Text>
-            <TouchableOpacity style={styles.iconButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
-              <Ionicons name="log-out-outline" size={26} color={Colors.blue} />
-            </TouchableOpacity>
+            <View style={styles.iconContainer}>
+              <TouchableOpacity style={styles.iconButton} onPress={handleRefresh}>
+                <Ionicons name="refresh" size={26} color={Colors.blue} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
+                <Ionicons name="log-out-outline" size={26} color={Colors.blue} />
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={styles.buttonGroupPrimary}>
             <TouchableOpacity
@@ -241,6 +246,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 25,
+  },
+  iconContainer: {
+    flexDirection: 'row',
+  },
+  iconButton: {
+    marginLeft: 10,
   },
   itemContainer: {
     flexDirection: 'row',

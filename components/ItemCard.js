@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { firebase } from '../firebaseConfig';  // Ensure firebaseConfig is correctly set up
 
 const Colors = {
   primary: "#ffffff",
@@ -11,7 +12,7 @@ const Colors = {
   gray: "#f9e8d1"
 };
 
-const ItemCard = ({ image, itemName, rentPerHour, description, phoneNumber, location, mode, subMode }) => {
+const ItemCard = ({ image, itemName, rentPerHour, description, phoneNumber, location, mode, subMode, ownerId, itemId,handleRefresh }) => {
   const navigation = useNavigation();
 
   let buttonTextDisplay;
@@ -34,14 +35,38 @@ const ItemCard = ({ image, itemName, rentPerHour, description, phoneNumber, loca
 
   let costDisplay = mode === "availableItems" ? "Cost per Hour: " : "Expected cost/Hour: ";
 
-  const handlePress = () => {
+  const handlePress = async () => {
     if (subMode !== 'byYou') {
       navigation.navigate('DetailedItem', {
-        item: { image, itemName, rentPerHour, description, phoneNumber, location, mode }
+        item: { image, itemName, rentPerHour, description, phoneNumber, location, mode, ownerId }
       });
+    } else {
+      // Handle deletion
+      const collec = mode === "availableItems" ? "items" : "rentRequests";
+      Alert.alert(
+        "Confirm Deletion",
+        "Are you sure you want to remove this item?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Yes", 
+            onPress: async () => {
+              try {
+                console.log(`Attempting to delete item with ID: ${itemId}`);
+                await firebase.firestore().collection(collec).doc(itemId).delete();
+                console.log("Item successfully deleted.");
+                Alert.alert("Item removed", "The item has been removed successfully.");
+                handleRefresh();
+              } catch (error) {
+                console.error("Error removing item: ", error);
+                Alert.alert("Error", "There was an error removing the item. Please try again.");
+              }
+            }
+          }
+        ]
+      );
     }
   };
-  
 
   return (
     <View style={styles.container}>
@@ -63,7 +88,6 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 10,
     padding: 10,
-    
   },
   image: {
     width: '100%',

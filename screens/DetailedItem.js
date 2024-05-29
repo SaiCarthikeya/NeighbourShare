@@ -17,12 +17,13 @@ const DetailedItem = ({ route }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("ownerId: ", item.ownerId); 
     const fetchOwnerName = async () => {
       try {
         const userDoc = await firebase.firestore().collection('users').doc(item.ownerId).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
-          setOwnerName(userData.name);
+          setOwnerName(userData.fullName);
         } else {
           console.log("No such document!");
         }

@@ -27,7 +27,7 @@ const AddItem = ({ navigation }) => {
     try {
       const newItem = {
         itemName,
-        imageUrl,
+        image: imageUrl,
         description,
         costPerHour,
         location,
