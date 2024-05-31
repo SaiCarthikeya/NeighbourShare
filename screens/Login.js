@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   styledButton: {
-    backgroundColor: Colors.brand,
+    backgroundColor: Colors.blue,
     color: Colors.teritiary,
     padding: 15,
     alignContent: 'center',

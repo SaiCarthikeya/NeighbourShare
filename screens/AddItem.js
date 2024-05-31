@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Octicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -24,6 +24,11 @@ const AddItem = ({ navigation }) => {
   const [mobile, setMobile] = useState('');
 
   const handleAddItem = async () => {
+    if (!itemName || !imageUrl || !description || !costPerHour || !location || !mobile) {
+      Alert.alert("Validation Error", "Please fill in all the fields.");
+      return;
+    }
+
     try {
       const newItem = {
         itemName,
@@ -39,7 +44,7 @@ const AddItem = ({ navigation }) => {
       await firebase.firestore().collection(collectionName).add(newItem);
       navigation.navigate('Home', { refresh: true });
     } catch (error) {
-      alert(error.message);
+      Alert.alert("Error", error.message);
     }
   };
 
@@ -48,14 +53,16 @@ const AddItem = ({ navigation }) => {
       <View style={styles.innerContainer}>
         <Text style={styles.header}>Add New {selectedType === 'item' ? 'Item' : 'Rent Request'}</Text>
         <View style={styles.formArea}>
-          <Picker
-            selectedValue={selectedType}
-            onValueChange={(itemValue) => setSelectedType(itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Add Item" value="item" />
-            <Picker.Item label="Add Rent Request" value="rentRequest" />
-          </Picker>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={selectedType}
+              onValueChange={(itemValue) => setSelectedType(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Add Item" value="item" />
+              <Picker.Item label="Add Rent Request" value="rentRequest" />
+            </Picker>
+          </View>
           <MyTextInput
             label="Item Name:"
             icon="tag"
@@ -79,7 +86,7 @@ const AddItem = ({ navigation }) => {
           />
           <MyTextInput
             label="Cost per Hour:"
-            icon="money "
+            icon="money"
             onChangeText={setCostPerHour}
             placeholder="Enter Cost per Hour"
             value={costPerHour}
@@ -112,7 +119,7 @@ const MyTextInput = ({ label, icon, ...props }) => {
   return (
     <View>
       <View style={styles.leftIcon}>
-        {icon === "money " ? (
+        {icon === "money" ? (
           <FontAwesome6 name="money-bill" size={30} color={Colors.brand} />
         ) : (
           <Octicons name={icon} size={30} color={Colors.brand} />
@@ -173,7 +180,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   styledButton: {
-    backgroundColor: Colors.brand,
+    backgroundColor: Colors.blue,
     color: Colors.teritiary,
     padding: 15,
     alignContent: 'center',
@@ -190,14 +197,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 5,
   },
+  pickerWrapper: {
+    borderWidth: 2,
+    borderColor: Colors.blue,
+    borderRadius: 12,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
   picker: {
     height: 50,
     width: '100%',
-    marginBottom: 20,
-    borderColor: Colors.secondary,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
   },
 });
 

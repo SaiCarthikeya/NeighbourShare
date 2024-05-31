@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ItemCard from '../components/ItemCard';
 import { firebase } from '../firebaseConfig';
@@ -16,9 +16,10 @@ const Colors = {
 const Home = ({ navigation }) => {
   const [name, setFullName] = useState('');
   const [selectedSection, setSelectedSection] = useState('availableItems');
-  const [selectedSubsection, setSelectedSubsection] = useState('byYou');
+  const [selectedSubsection, setSelectedSubsection] = useState('byOthers');
   const [availableItems, setAvailableItems] = useState([]);
   const [rentRequests, setRentRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchUser = async () => {
     try {
@@ -54,15 +55,23 @@ const Home = ({ navigation }) => {
     }
   };
 
+  const fetchData = async () => {
+    setLoading(true);
+    await fetchUser();
+    await fetchItems();
+    await fetchRentRequests();
+    setLoading(false);
+  };
+
   useEffect(() => {
-    fetchUser();
-    fetchItems();
-    fetchRentRequests();
+    fetchData();
   }, []);
 
-  const handleRefresh = () => {
-    fetchItems();
-    fetchRentRequests();
+  const handleRefresh = async () => {
+    setLoading(true);
+    await fetchItems();
+    await fetchRentRequests();
+    setLoading(false);
   };
 
   const renderItems = () => {
@@ -108,24 +117,24 @@ const Home = ({ navigation }) => {
         ) : (
           filteredRequests.map(request => (
             <ItemCard
-            key={request.id}
-            image={request.image}
-            itemId={request.id}
-            itemName={request.itemName}
-            rentPerHour={request.rentPerHour}
-            mode={selectedSection}
-            handleRefresh={handleRefresh}
-            subMode={selectedSubsection}
-            description={request.description}
-            phoneNumber={request.mobile}
-            location={request.location}
+              key={request.id}
+              image={request.image}
+              itemId={request.id}
+              itemName={request.itemName}
+              rentPerHour={request.rentPerHour}
+              mode={selectedSection}
+              handleRefresh={handleRefresh}
+              subMode={selectedSubsection}
+              description={request.description}
+              phoneNumber={request.mobile}
+              location={request.location}
             />
           ))
         )}
       </View>
     );
   };
-  
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
@@ -158,19 +167,25 @@ const Home = ({ navigation }) => {
           </View>
           <View style={styles.buttonGroup}>
             <TouchableOpacity
-              style={[styles.sectionButton, selectedSubsection === 'byYou' && styles.activeButton]}
-              onPress={() => setSelectedSubsection('byYou')}
-            >
-              <Text style={styles.buttonText}>By You</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={[styles.sectionButton, selectedSubsection === 'byOthers' && styles.activeButton]}
               onPress={() => setSelectedSubsection('byOthers')}
             >
               <Text style={styles.buttonText}>By Others</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.sectionButton, selectedSubsection === 'byYou' && styles.activeButton]}
+              onPress={() => setSelectedSubsection('byYou')}
+            >
+              <Text style={styles.buttonText}>By You</Text>
+            </TouchableOpacity>
           </View>
-          {selectedSection === 'availableItems' ? renderItems() : renderRequests()}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.blue} />
+            </View>
+          ) : (
+            selectedSection === 'availableItems' ? renderItems() : renderRequests()
+          )}
         </View>
       </ScrollView>
       <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddItem")}>
@@ -290,6 +305,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 2,
     elevation: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
 
