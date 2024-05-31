@@ -35,7 +35,13 @@ const Register = ({ navigation }) => {
         });
       })
       .then(() => {
-        navigation.navigate("Home");
+        const user = firebase.auth().currentUser
+        user.sendEmailVerification().then(() => {
+            alert("Verification email has been sent");
+            navigation.navigate("Home")
+        }).catch((err) => {
+            console.log(err)
+        })
       })
       .catch((error) => {
         alert(error.message);

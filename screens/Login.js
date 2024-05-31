@@ -31,6 +31,20 @@ const Login = ({navigation}) => {
     }
   };
 
+  const resetPassword = async () => {
+    if (!email) {
+      alert("Enter a valid email");
+      return
+    } 
+    firebase.auth().sendPasswordResetEmail(email)
+  .then(() => {
+    alert("Password reset email has been sent!")
+  })
+  .catch((error) => {
+    alert(error.message)
+  });
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
@@ -67,9 +81,15 @@ const Login = ({navigation}) => {
           </TouchableOpacity>
           <View style={styles.line} />
           <View style={styles.extraView}>
-            <Text style={styles.extraText}>Don't have an account already?</Text>
+            <Text style={styles.extraText}>Don't have an account already? </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Register")} style={styles.textLink}>
-              <Text style={styles.textLinkContent}>Signup</Text>
+              <Text style={styles.textLinkContent}> Signup</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.extraView}>
+            <Text style={styles.extraText}>Forgot you Password? Dont't worry </Text>
+            <TouchableOpacity onPress={resetPassword} style={styles.textLink}>
+              <Text style={styles.textLinkContent}> Reset Password</Text>
             </TouchableOpacity>
           </View>
         </View>

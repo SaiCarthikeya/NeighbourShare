@@ -82,12 +82,14 @@ const ItemCard = ({ image, itemName, rentPerHour, description, phoneNumber, loca
 
 const styles = StyleSheet.create({
   container: {
-    width: '48%',
+    width: '45%',
     marginBottom: 20,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#ddd',
+    backgroundColor: Colors.primary,
     borderRadius: 10,
     padding: 10,
+    margin: 5,
   },
   image: {
     width: '100%',

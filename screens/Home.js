@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ItemCard from '../components/ItemCard';
@@ -20,13 +20,16 @@ const Home = ({ navigation }) => {
   const [availableItems, setAvailableItems] = useState([]);
   const [rentRequests, setRentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const fetchUser = async () => {
     try {
-      const userSnapshot = await firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid).get();
+      const user = firebase.auth().currentUser;
+      const userSnapshot = await firebase.firestore().collection('users').doc(user.uid).get();
       if (userSnapshot.exists) {
         const userData = userSnapshot.data();
         setFullName(userData.fullName);
+        setIsEmailVerified(user.emailVerified);
       } else {
         alert("User does not exist");
       }
@@ -58,8 +61,13 @@ const Home = ({ navigation }) => {
   const fetchData = async () => {
     setLoading(true);
     await fetchUser();
-    await fetchItems();
-    await fetchRentRequests();
+    if (firebase.auth().currentUser.emailVerified) {
+      await fetchItems();
+      await fetchRentRequests();
+      setIsEmailVerified(true);
+    } else {
+      setIsEmailVerified(false);
+    }
     setLoading(false);
   };
 
@@ -140,57 +148,71 @@ const Home = ({ navigation }) => {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.container}>
           <Image source={require("../assets/LogoLeftRight.png")} style={styles.logo} resizeMode="contain" />
-          <View style={styles.welcomeContainer}>
-            <Text style={styles.text}>Welcome {name}</Text>
-            <View style={styles.iconContainer}>
-              <TouchableOpacity style={styles.iconButton} onPress={handleRefresh}>
-                <Ionicons name="refresh" size={26} color={Colors.blue} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
-                <Ionicons name="log-out-outline" size={26} color={Colors.blue} />
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={styles.buttonGroupPrimary}>
-            <TouchableOpacity
-              style={[styles.sectionPrimaryButton, selectedSection === 'availableItems' && styles.activePrimaryButton]}
-              onPress={() => setSelectedSection('availableItems')}
-            >
-              <Text style={[styles.primaryButtonText, selectedSection === 'availableItems' && styles.activePrimaryButtonText]}>Available Items</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.sectionPrimaryButton, selectedSection === 'rentRequests' && styles.activePrimaryButton]}
-              onPress={() => setSelectedSection('rentRequests')}
-            >
-              <Text style={[styles.primaryButtonText, selectedSection === 'rentRequests' && styles.activePrimaryButtonText]}>Rent Requests</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.buttonGroup}>
-            <TouchableOpacity
-              style={[styles.sectionButton, selectedSubsection === 'byOthers' && styles.activeButton]}
-              onPress={() => setSelectedSubsection('byOthers')}
-            >
-              <Text style={styles.buttonText}>By Others</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.sectionButton, selectedSubsection === 'byYou' && styles.activeButton]}
-              onPress={() => setSelectedSubsection('byYou')}
-            >
-              <Text style={styles.buttonText}>By You</Text>
-            </TouchableOpacity>
-          </View>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.blue} />
-            </View>
+          {isEmailVerified ? (
+            <>
+              <View style={styles.welcomeContainer}>
+                <Text style={styles.text}>Welcome {name}</Text>
+                <View style={styles.iconContainer}>
+                  <TouchableOpacity style={styles.iconButton} onPress={handleRefresh}>
+                    <Ionicons name="refresh" size={26} color={Colors.blue} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.iconButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
+                    <Ionicons name="log-out-outline" size={26} color={Colors.blue} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.buttonGroupPrimary}>
+                <TouchableOpacity
+                  style={[styles.sectionPrimaryButton, selectedSection === 'availableItems' && styles.activePrimaryButton]}
+                  onPress={() => setSelectedSection('availableItems')}
+                >
+                  <Text style={[styles.primaryButtonText, selectedSection === 'availableItems' && styles.activePrimaryButtonText]}>Available Items</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sectionPrimaryButton, selectedSection === 'rentRequests' && styles.activePrimaryButton]}
+                  onPress={() => setSelectedSection('rentRequests')}
+                >
+                  <Text style={[styles.primaryButtonText, selectedSection === 'rentRequests' && styles.activePrimaryButtonText]}>Rent Requests</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.buttonGroup}>
+                <TouchableOpacity
+                  style={[styles.sectionButton, selectedSubsection === 'byOthers' && styles.activeButton]}
+                  onPress={() => setSelectedSubsection('byOthers')}
+                >
+                  <Text style={styles.buttonText}>By Others</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sectionButton, selectedSubsection === 'byYou' && styles.activeButton]}
+                  onPress={() => setSelectedSubsection('byYou')}
+                >
+                  <Text style={styles.buttonText}>By You</Text>
+                </TouchableOpacity>
+              </View>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={Colors.blue} />
+                </View>
+              ) : (
+                selectedSection === 'availableItems' ? renderItems() : renderRequests()
+              )}
+            </>
           ) : (
-            selectedSection === 'availableItems' ? renderItems() : renderRequests()
+            <View style={styles.verificationContainer}>
+              <Text style={styles.text}>Please verify your email to continue.</Text>
+              <Text style={styles.text}>Check your inbox and try logging in again.</Text>
+              <TouchableOpacity style={styles.loginButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
+                <Text style={styles.loginButtonText}>Go to Login</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </ScrollView>
-      <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddItem")}>
-        <Ionicons name="add" size={36} color={Colors.primary} />
-      </TouchableOpacity>
+      {isEmailVerified && (
+        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddItem")}>
+          <Ionicons name="add" size={36} color={Colors.primary} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -271,6 +293,7 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    margin: 5,
     padding: 5,
     justifyContent: 'space-between',
   },
@@ -310,7 +333,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  }
+  },
+  verificationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 20,
+  },
+  loginButton: {
+    marginTop: 20,
+    backgroundColor: Colors.blue,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  loginButtonText: {
+    color: Colors.primary,
+    fontSize: 18,
+  },
 });
 
 export default Home;
