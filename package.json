@@ -23,7 +23,8 @@
     "react-native-dotenv": "^3.4.11",
     "react-native-gesture-handler": "^2.16.2",
     "react-navigation": "^5.0.0",
-    "@react-native-picker/picker": "2.7.5"
+    "@react-native-picker/picker": "2.7.5",
+    "expo-location": "~17.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

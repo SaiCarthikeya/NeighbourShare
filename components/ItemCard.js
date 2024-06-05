@@ -12,9 +12,9 @@ const Colors = {
   gray: "#f9e8d1"
 };
 
-const ItemCard = ({ image, itemName, rentPerHour, description, phoneNumber, location, mode, subMode, ownerId, itemId,handleRefresh }) => {
+const ItemCard = ({ image, itemName, rentPerHour, description, phoneNumber,currentLocation, location, mode, subMode, ownerId, itemId,handleRefresh }) => {
   const navigation = useNavigation();
-
+  console.log("Submode " + mode +" " + ownerId)
   let buttonTextDisplay;
   let displayRed = false;
   if (mode === "availableItems") {
@@ -37,8 +37,10 @@ const ItemCard = ({ image, itemName, rentPerHour, description, phoneNumber, loca
 
   const handlePress = async () => {
     if (subMode !== 'byYou') {
+      console.log(location)
       navigation.navigate('DetailedItem', {
-        item: { image, itemName, rentPerHour, description, phoneNumber, location, mode, ownerId }
+        item: { image, itemName, rentPerHour, description, phoneNumber, location, mode, ownerId,currentLocation }
+
       });
     } else {
       // Handle deletion

@@ -87,7 +87,7 @@ const Login = ({navigation}) => {
             </TouchableOpacity>
           </View>
           <View style={styles.extraView}>
-            <Text style={styles.extraText}>Forgot you Password? Dont't worry </Text>
+            <Text style={styles.extraText}>Forgot you Password? Don't worry </Text>
             <TouchableOpacity onPress={resetPassword} style={styles.textLink}>
               <Text style={styles.textLinkContent}> Reset Password</Text>
             </TouchableOpacity>

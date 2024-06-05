@@ -11,13 +11,29 @@ const Colors = {
   gray: "#f9e8d1"
 };
 
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const toRadians = (degree) => degree * (Math.PI / 180);
+  const R = 6371; 
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c; 
+  return distance;
+};
+
+
 const DetailedItem = ({ route }) => {
   const { item } = route.params;
+  const currentLocation = item.currentLocation;
   const [ownerName, setOwnerName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [distance, setDistance] = useState(null);
+
 
   useEffect(() => {
-    console.log("ownerId: ", item.ownerId); 
     const fetchOwnerName = async () => {
       try {
         const userDoc = await firebase.firestore().collection('users').doc(item.ownerId).get();
@@ -34,8 +50,21 @@ const DetailedItem = ({ route }) => {
       }
     };
 
+    const calculateItemDistance = () => {
+      const dist = calculateDistance(
+        currentLocation.latitude,
+        currentLocation.longitude,
+        item.location.latitude,
+        item.location.longitude
+      );
+      console.log(currentLocation);
+      console.log(item.location);
+      setDistance(dist);
+    };
+
     fetchOwnerName();
-  }, [item.ownerId]);
+    calculateItemDistance();
+  }, [item.ownerId, currentLocation, item.location]);
 
   if (loading) {
     return (
@@ -57,9 +86,11 @@ const DetailedItem = ({ route }) => {
           <Text style={styles.contactLabel}>Contact:</Text>
           <Text style={styles.phoneNumber}>{item.phoneNumber}</Text>
         </View>
-        <View style={styles.locationContainer}>
-          <Text style={styles.locationLabel}>Location:</Text>
-          <Text style={styles.location}>{item.location}</Text>
+        <View style={styles.distanceContainer}>
+          <Text style={styles.distanceLabel}>Distance:</Text>
+          <Text style={styles.distance}>
+            {distance < 1 ? "Less than 1 km" : `${distance.toFixed(2)} km`}
+          </Text>
         </View>
         <View style={styles.ownerContainer}>
           <Text style={styles.ownerLabel}>Owner:</Text>
@@ -82,6 +113,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  }, distanceContainer: {
+    marginBottom: 16,
+  },
+  distanceLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.tertiary,
+    marginBottom: 4,
+  },
+  distance: {
+    fontSize: 16,
+    color: Colors.tertiary,
   },
   image: {
     width: '100%',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Octicons } from '@expo/vector-icons';
@@ -14,17 +14,18 @@ const Colors = {
   gray: "#f9e8d1"
 };
 
-const AddItem = ({ navigation }) => {
+const AddItem = ({ route, navigation }) => {
+  const { currentLocation } = route.params;
   const [selectedType, setSelectedType] = useState('item');
   const [itemName, setItemName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [description, setDescription] = useState('');
-  const [costPerHour, setCostPerHour] = useState('');
-  const [location, setLocation] = useState('');
+  const [rentPerHour, setCostPerHour] = useState('');
+  const [location, setLocation] = useState(currentLocation || null);
   const [mobile, setMobile] = useState('');
 
   const handleAddItem = async () => {
-    if (!itemName || !imageUrl || !description || !costPerHour || !location || !mobile) {
+    if (!itemName || !imageUrl || !description || !rentPerHour || !location || !mobile) {
       Alert.alert("Validation Error", "Please fill in all the fields.");
       return;
     }
@@ -34,7 +35,7 @@ const AddItem = ({ navigation }) => {
         itemName,
         image: imageUrl,
         description,
-        costPerHour,
+        rentPerHour,
         location,
         mobile,
         type: selectedType,
@@ -47,6 +48,22 @@ const AddItem = ({ navigation }) => {
       Alert.alert("Error", error.message);
     }
   };
+
+  useEffect(() => {
+    if (!currentLocation) {
+      const requestLocationPermission = async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Permission to access location was denied');
+          return;
+        }
+
+        let location = await Location.getCurrentPositionAsync({});
+        setLocation(location.coords);
+      };
+      requestLocationPermission();
+    }
+  }, [currentLocation]);
 
   return (
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
@@ -89,14 +106,7 @@ const AddItem = ({ navigation }) => {
             icon="money"
             onChangeText={setCostPerHour}
             placeholder="Enter Cost per Hour"
-            value={costPerHour}
-          />
-          <MyTextInput
-            label="Location:"
-            icon="location"
-            onChangeText={setLocation}
-            placeholder="Enter Location"
-            value={location}
+            value={rentPerHour}
           />
           <MyTextInput
             label="Mobile:"
@@ -109,6 +119,11 @@ const AddItem = ({ navigation }) => {
           <TouchableOpacity style={styles.styledButton} onPress={handleAddItem}>
             <Text style={styles.buttonText}>Add {selectedType === 'item' ? 'Item' : 'Rent Request'}</Text>
           </TouchableOpacity>
+          {location && (
+        <Text style={styles.locationText}>
+          Location: {location.latitude}, {location.longitude}
+        </Text>
+      )}
         </View>
       </View>
     </ScrollView>

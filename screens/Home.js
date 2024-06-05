@@ -3,6 +3,7 @@ import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity, ActivityIn
 import { Ionicons } from '@expo/vector-icons';
 import ItemCard from '../components/ItemCard';
 import { firebase } from '../firebaseConfig';
+import * as Location from "expo-location";
 
 const Colors = {
   primary: "#ffffff",
@@ -21,6 +22,10 @@ const Home = ({ navigation }) => {
   const [rentRequests, setRentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
+
+  const [currentLocation, setCurrentLocation] = useState(null);
+
 
   const fetchUser = async () => {
     try {
@@ -36,6 +41,19 @@ const Home = ({ navigation }) => {
     } catch (error) {
       console.error("Error fetching user data: ", error);
     }
+  };
+
+  const getLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      console.log("Permission to access location was denied");
+      return;
+    }
+    setLocationPermissionGranted(true);
+    let location = await Location.getCurrentPositionAsync({});
+    setCurrentLocation(location.coords);
+    console.log(currentLocation)
+    console.log(location)
   };
 
   const fetchItems = async () => {
@@ -73,6 +91,7 @@ const Home = ({ navigation }) => {
 
   useEffect(() => {
     fetchData();
+    getLocation();
   }, []);
 
   const handleRefresh = async () => {
@@ -104,6 +123,7 @@ const Home = ({ navigation }) => {
               subMode={selectedSubsection}
               phoneNumber={item.mobile}
               location={item.location}
+              currentLocation={currentLocation}
               handleRefresh={handleRefresh}
               ownerId={item.ownerId}
             />
@@ -131,10 +151,12 @@ const Home = ({ navigation }) => {
               itemName={request.itemName}
               rentPerHour={request.rentPerHour}
               mode={selectedSection}
+              ownerId={request.ownerId}
               handleRefresh={handleRefresh}
               subMode={selectedSubsection}
               description={request.description}
               phoneNumber={request.mobile}
+              currentLocation={currentLocation}
               location={request.location}
             />
           ))
@@ -149,54 +171,63 @@ const Home = ({ navigation }) => {
         <View style={styles.container}>
           <Image source={require("../assets/LogoLeftRight.png")} style={styles.logo} resizeMode="contain" />
           {isEmailVerified ? (
-            <>
-              <View style={styles.welcomeContainer}>
-                <Text style={styles.text}>Welcome {name}</Text>
-                <View style={styles.iconContainer}>
-                  <TouchableOpacity style={styles.iconButton} onPress={handleRefresh}>
-                    <Ionicons name="refresh" size={26} color={Colors.blue} />
+            locationPermissionGranted ? (
+              <>
+                <View style={styles.welcomeContainer}>
+                  <Text style={styles.text}>Welcome {name}</Text>
+                  <View style={styles.iconContainer}>
+                    <TouchableOpacity style={styles.iconButton} onPress={handleRefresh}>
+                      <Ionicons name="refresh" size={26} color={Colors.blue} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.iconButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
+                      <Ionicons name="log-out-outline" size={26} color={Colors.blue} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.buttonGroupPrimary}>
+                  <TouchableOpacity
+                    style={[styles.sectionPrimaryButton, selectedSection === 'availableItems' && styles.activePrimaryButton]}
+                    onPress={() => setSelectedSection('availableItems')}
+                  >
+                    <Text style={[styles.primaryButtonText, selectedSection === 'availableItems' && styles.activePrimaryButtonText]}>Available Items</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.iconButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
-                    <Ionicons name="log-out-outline" size={26} color={Colors.blue} />
+                  <TouchableOpacity
+                    style={[styles.sectionPrimaryButton, selectedSection === 'rentRequests' && styles.activePrimaryButton]}
+                    onPress={() => setSelectedSection('rentRequests')}
+                  >
+                    <Text style={[styles.primaryButtonText, selectedSection === 'rentRequests' && styles.activePrimaryButtonText]}>Rent Requests</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-              <View style={styles.buttonGroupPrimary}>
-                <TouchableOpacity
-                  style={[styles.sectionPrimaryButton, selectedSection === 'availableItems' && styles.activePrimaryButton]}
-                  onPress={() => setSelectedSection('availableItems')}
-                >
-                  <Text style={[styles.primaryButtonText, selectedSection === 'availableItems' && styles.activePrimaryButtonText]}>Available Items</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.sectionPrimaryButton, selectedSection === 'rentRequests' && styles.activePrimaryButton]}
-                  onPress={() => setSelectedSection('rentRequests')}
-                >
-                  <Text style={[styles.primaryButtonText, selectedSection === 'rentRequests' && styles.activePrimaryButtonText]}>Rent Requests</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.buttonGroup}>
-                <TouchableOpacity
-                  style={[styles.sectionButton, selectedSubsection === 'byOthers' && styles.activeButton]}
-                  onPress={() => setSelectedSubsection('byOthers')}
-                >
-                  <Text style={styles.buttonText}>By Others</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.sectionButton, selectedSubsection === 'byYou' && styles.activeButton]}
-                  onPress={() => setSelectedSubsection('byYou')}
-                >
-                  <Text style={styles.buttonText}>By You</Text>
-                </TouchableOpacity>
-              </View>
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={Colors.blue} />
+                <View style={styles.buttonGroup}>
+                  <TouchableOpacity
+                    style={[styles.sectionButton, selectedSubsection === 'byOthers' && styles.activeButton]}
+                    onPress={() => setSelectedSubsection('byOthers')}
+                  >
+                    <Text style={styles.buttonText}>By Others</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.sectionButton, selectedSubsection === 'byYou' && styles.activeButton]}
+                    onPress={() => setSelectedSubsection('byYou')}
+                  >
+                    <Text style={styles.buttonText}>By You</Text>
+                  </TouchableOpacity>
                 </View>
-              ) : (
-                selectedSection === 'availableItems' ? renderItems() : renderRequests()
-              )}
-            </>
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={Colors.blue} />
+                  </View>
+                ) : (
+                  selectedSection === 'availableItems' ? renderItems() : renderRequests()
+                )}
+              </>
+            ) : (
+              <View style={styles.verificationContainer}>
+                <Text style={styles.text}>Please grant location permission to continue.</Text>
+                <TouchableOpacity style={styles.loginButton} onPress={getLocation}>
+                  <Text style={styles.loginButtonText}>Grant Location Permission</Text>
+                </TouchableOpacity>
+              </View>
+            )
           ) : (
             <View style={styles.verificationContainer}>
               <Text style={styles.text}>Please verify your email to continue.</Text>
@@ -208,13 +239,14 @@ const Home = ({ navigation }) => {
           )}
         </View>
       </ScrollView>
-      {isEmailVerified && (
-        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddItem")}>
+      {isEmailVerified && locationPermissionGranted && (
+        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddItem", { currentLocation })}>
           <Ionicons name="add" size={36} color={Colors.primary} />
         </TouchableOpacity>
       )}
     </View>
   );
+  
 }
 
 const styles = StyleSheet.create({
