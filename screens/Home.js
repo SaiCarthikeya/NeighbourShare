@@ -3,7 +3,25 @@ import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity, ActivityIn
 import { Ionicons } from '@expo/vector-icons';
 import ItemCard from '../components/ItemCard';
 import { firebase } from '../firebaseConfig';
+import Slider from '@react-native-community/slider';
+
 import * as Location from "expo-location";
+
+const getDistance = (latitude1, longitude1, latitude2, longitude2) => {
+  const toRadian = n => (n * Math.PI) / 180;
+  const R = 6371; // km
+
+  const dLat = toRadian(latitude2 - latitude1);
+  const dLon = toRadian(longitude2 - longitude1);
+  const lat1 = toRadian(latitude1);
+  const lat2 = toRadian(latitude2);
+
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+};
 
 const Colors = {
   primary: "#ffffff",
@@ -23,8 +41,10 @@ const Home = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
-
+  const [checkingEmailVerification, setCheckingEmailVerification] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [distanceFilter, setDistanceFilter] = useState(20); 
+  const [maxDistance, setMaxDistance] = useState(20);
 
 
   const fetchUser = async () => {
@@ -47,19 +67,31 @@ const Home = ({ navigation }) => {
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
       console.log("Permission to access location was denied");
+      setLocationPermissionGranted(false);
+      setLoading(false);  // Stop loading if permission is denied
       return;
     }
     setLocationPermissionGranted(true);
     let location = await Location.getCurrentPositionAsync({});
     setCurrentLocation(location.coords);
-    console.log(currentLocation)
-    console.log(location)
+    setLoading(false);
   };
+  
+  
 
   const fetchItems = async () => {
     try {
       const itemsSnapshot = await firebase.firestore().collection('items').get();
-      const items = itemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const items = itemsSnapshot.docs.map(doc => {
+        const item = doc.data();
+        const distance = currentLocation ? getDistance(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          item.location.latitude,
+          item.location.longitude
+        ) : null;
+        return { id: doc.id, ...item, distance };
+      });
       setAvailableItems(items);
     } catch (error) {
       console.error("Error fetching items: ", error);
@@ -69,7 +101,16 @@ const Home = ({ navigation }) => {
   const fetchRentRequests = async () => {
     try {
       const requestsSnapshot = await firebase.firestore().collection('rentRequests').get();
-      const requests = requestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const requests = requestsSnapshot.docs.map(doc => {
+        const request = doc.data();
+        const distance = currentLocation ? getDistance(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          request.location.latitude,
+          request.location.longitude
+        ) : null;
+        return { id: doc.id, ...request, distance };
+      });
       setRentRequests(requests);
     } catch (error) {
       console.error("Error fetching rent requests: ", error);
@@ -80,19 +121,26 @@ const Home = ({ navigation }) => {
     setLoading(true);
     await fetchUser();
     if (firebase.auth().currentUser.emailVerified) {
-      await fetchItems();
-      await fetchRentRequests();
       setIsEmailVerified(true);
+      await getLocation();
     } else {
       setIsEmailVerified(false);
+      setCheckingEmailVerification(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
-    getLocation();
   }, []);
+
+  useEffect(() => {
+    if (currentLocation) {
+      fetchItems();
+      fetchRentRequests();
+      setLoading(false);
+      setCheckingEmailVerification(false);
+    }
+  }, [currentLocation]);
 
   const handleRefresh = async () => {
     setLoading(true);
@@ -102,10 +150,14 @@ const Home = ({ navigation }) => {
   };
 
   const renderItems = () => {
-    const filteredItems = availableItems.filter(item =>
-      selectedSubsection === 'byYou' ? item.ownerId === firebase.auth().currentUser.uid : item.ownerId !== firebase.auth().currentUser.uid
-    );
-
+    const filteredItems = availableItems.filter(item => {
+      if (selectedSubsection === 'byYou') {
+        return item.ownerId === firebase.auth().currentUser.uid;
+      } else {
+        return item.ownerId !== firebase.auth().currentUser.uid && (distanceFilter === maxDistance || item.distance <= distanceFilter);
+      }
+    });
+  
     return (
       <View style={styles.itemContainer}>
         {filteredItems.length === 0 ? (
@@ -123,6 +175,7 @@ const Home = ({ navigation }) => {
               subMode={selectedSubsection}
               phoneNumber={item.mobile}
               location={item.location}
+              distance={item.distance}
               currentLocation={currentLocation}
               handleRefresh={handleRefresh}
               ownerId={item.ownerId}
@@ -132,12 +185,16 @@ const Home = ({ navigation }) => {
       </View>
     );
   };
-
+  
   const renderRequests = () => {
-    const filteredRequests = rentRequests.filter(request =>
-      selectedSubsection === 'byYou' ? request.ownerId === firebase.auth().currentUser.uid : request.ownerId !== firebase.auth().currentUser.uid
-    );
-
+    const filteredRequests = rentRequests.filter(request => {
+      if (selectedSubsection === 'byYou') {
+        return request.ownerId === firebase.auth().currentUser.uid;
+      } else {
+        return request.ownerId !== firebase.auth().currentUser.uid && (distanceFilter === maxDistance || request.distance <= distanceFilter);
+      }
+    });
+  
     return (
       <View style={styles.itemContainer}>
         {filteredRequests.length === 0 ? (
@@ -156,6 +213,7 @@ const Home = ({ navigation }) => {
               subMode={selectedSubsection}
               description={request.description}
               phoneNumber={request.mobile}
+              distance={request.distance}
               currentLocation={currentLocation}
               location={request.location}
             />
@@ -164,14 +222,20 @@ const Home = ({ navigation }) => {
       </View>
     );
   };
-
+  
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.container}>
           <Image source={require("../assets/LogoLeftRight.png")} style={styles.logo} resizeMode="contain" />
+
           {isEmailVerified ? (
-            locationPermissionGranted ? (
+          locationPermissionGranted ? (
+            loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.blue} />
+              </View>
+            ) : (
               <>
                 <View style={styles.welcomeContainer}>
                   <Text style={styles.text}>Welcome {name}</Text>
@@ -212,32 +276,46 @@ const Home = ({ navigation }) => {
                     <Text style={styles.buttonText}>By You</Text>
                   </TouchableOpacity>
                 </View>
-                {loading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={Colors.blue} />
-                  </View>
-                ) : (
-                  selectedSection === 'availableItems' ? renderItems() : renderRequests()
+                
+                {selectedSubsection === 'byOthers' && (
+                 <View style={styles.sliderContainer}>
+                 <Text>Filter by distance: {distanceFilter === maxDistance ? "Unlimited" : `${distanceFilter} km`}</Text>
+                 <Slider
+                   style={{ width: 200, height: 40 }}
+                   minimumValue={1}
+                   maximumValue={maxDistance + 1}
+                   step={1}
+                   value={distanceFilter}
+                   onValueChange={(value) => setDistanceFilter(value === maxDistance + 1 ? maxDistance : value)}
+                   minimumTrackTintColor={Colors.blue}
+                   maximumTrackTintColor="#000000"
+                 />
+               </View>
                 )}
+
+                {selectedSection === 'availableItems' ? renderItems() : renderRequests()}
               </>
-            ) : (
-              <View style={styles.verificationContainer}>
-                <Text style={styles.text}>Please grant location permission to continue.</Text>
-                <TouchableOpacity style={styles.loginButton} onPress={getLocation}>
-                  <Text style={styles.loginButtonText}>Grant Location Permission</Text>
-                </TouchableOpacity>
-              </View>
             )
           ) : (
             <View style={styles.verificationContainer}>
-              <Text style={styles.text}>Please verify your email to continue.</Text>
-              <Text style={styles.text}>Check your inbox and try logging in again.</Text>
-              <TouchableOpacity style={styles.loginButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
-                <Text style={styles.loginButtonText}>Go to Login</Text>
+              <Text style={styles.text}>Please grant location permission to continue.</Text>
+              <TouchableOpacity style={styles.loginButton} onPress={getLocation}>
+                <Text style={styles.loginButtonText}>Grant Location Permission</Text>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
+          )
+        ) : (
+          <View style={styles.verificationContainer}>
+            <Text style={styles.text}>Please verify your email to continue.</Text>
+            <Text style={styles.text}>Check your inbox and try logging in again.</Text>
+            <TouchableOpacity style={styles.loginButton} onPress={() => { firebase.auth().signOut().then(() => navigation.navigate("Login")) }}>
+              <Text style={styles.loginButtonText}>Go to Login</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+
+      </View>
       </ScrollView>
       {isEmailVerified && locationPermissionGranted && (
         <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddItem", { currentLocation })}>
@@ -246,7 +324,6 @@ const Home = ({ navigation }) => {
       )}
     </View>
   );
-  
 }
 
 const styles = StyleSheet.create({
@@ -287,6 +364,11 @@ const styles = StyleSheet.create({
   activePrimaryButton: {
     borderBottomWidth: 3,
     borderBottomColor: Colors.brand,
+  }, 
+  sliderContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginVertical: 10,
   },
   buttonGroup: {
     flexDirection: 'row',
