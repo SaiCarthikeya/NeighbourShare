@@ -4,17 +4,39 @@
 NeighbourShare is a location-based peer-to-peer mobile app built using **React Native** and **Firebase** that enables users to **lend**, **borrow**, or **request** items within their local communities.
 
 ---
-
 ## 📱 Screenshots
 
-> _Add these in your GitHub repo after uploading to `/assets` or any image hosting service._
+<table>
+  <tr>
+    <td><img src="./assets/login.png" alt="Login Screen" width="300"/></td>
+    <td><img src="./assets/register.png" alt="Register Screen" width="300"/></td>
+  </tr>
+  <tr>
+    <td><img src="./assets/forgot_password.png" alt="Forgot Password Screen" width="300"/></td>
+    <td></td>
+  </tr>
+</table>
 
-- ![Home Screen](./assets/home.png)
-- ![Login Screen](./assets/login.png)
-- ![Register Screen](./assets/register.png)
-- ![Add Item](./assets/add_item.png)
-- ![Item Detail](./assets/item_detail.png)
+### 📧 Email Verification
 
+<p align="center">
+  <img src="./assets/email_verification_prompt.png" alt="Email Verification Prompt" width="600"/>
+</p>
+
+<table>
+  <tr>
+    <td><img src="./assets/home_available_items.png" alt="Home Screen - Available Items" width="300"/></td>
+    <td><img src="./assets/home_rent_requests.png" alt="Home Screen - Rent Requests" width="300"/></td>
+  </tr>
+  <tr>
+    <td><img src="./assets/filter_by_distance.png" alt="Filter by Distance" width="300"/></td>
+    <td><img src="./assets/add_item.png" alt="Add New Item Screen" width="300"/></td>
+  </tr>
+  <tr>
+    <td><img src="./assets/item_detail.png" alt="Item Detail Screen" width="300"/></td>
+    <td></td>
+  </tr>
+</table>
 ---
 
 ## 🧠 Features
