@@ -70,7 +70,7 @@ NeighbourShare is a location-based peer-to-peer mobile app built using **React N
 
 1. Clone the repo:
    ```bash
-   git clone https://github.com/your-username/neighbourShare.git
+   git clone https://github.com/SaiCarthikeya/neighbourShare.git
    cd neighbourShare
    ```
 
